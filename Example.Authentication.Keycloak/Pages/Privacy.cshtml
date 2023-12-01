@@ -1,0 +1,28 @@
+﻿@page
+@model PrivacyModel
+@{
+    ViewData["Title"] = "Privacy Policy";
+}
+<h1>@ViewData["Title"]</h1>
+
+<p>Use this page to detail your site's privacy policy.</p>
+
+
+@if (User.Identity.IsAuthenticated)
+{
+    <table>
+        @foreach (var userClaim in User.Claims)
+        {
+            <tr style="border-bottom:solid 1px gray;">
+                <td style="font-weigh:bold;">@userClaim.Type</td>
+                <td style="font-weight:bold;">:</td>
+                <td>@userClaim.Value</td>
+            </tr>
+        }
+    </table>
+
+    <form method="post">
+        
+        <input type="submit" name="Submit"/>
+    </form>
+}
