@@ -15,6 +15,35 @@ To use this integration, follow these steps:
     {
         t.Filters.Add<KeycloakAsyncAuthorizationFilter>();
     });
+
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+    })
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "Test";
+        options.SlidingExpiration = true;
+    })
+    .AddOpenIdConnect(options =>
+    {
+        options.Authority = "http://localhost:8080/realms/master";
+        options.ClientId = "test-client";
+        options.ClientSecret = "85dFFVJ9zIghgWJQFaKKfxEIStt22vYG";
+        options.ResponseType = "code";
+        options.SaveTokens = false;
+        options.Scope.Add("openid");
+        options.UsePkce = true;
+        options.CallbackPath = "/signin-oidc";
+        options.SignedOutCallbackPath = "/signout-callback-oidc";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            NameClaimType = "name",
+            RoleClaimType = ClaimTypes.Role,
+        };
+        options.RequireHttpsMetadata = false;
+    });
     ```
 
 2. If you are in a development environment, use the `MigrateKeycloakRoles` method to automatically migrate Razor Pages and Controllers to Keycloak roles. Specify your Keycloak server details in the provided options:
@@ -33,7 +62,12 @@ To use this integration, follow these steps:
             option.AdminScope = null;
         });
     }
+
+
+    
     ```
+
+
 
 ## Usage
 
