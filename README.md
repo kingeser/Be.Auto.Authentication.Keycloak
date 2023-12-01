@@ -73,6 +73,14 @@ To use this integration, follow these steps:
 
 Once the integration is set up, you can use the `[Authorize]` attribute without specifying roles explicitly. The roles will be automatically mapped based on your Razor Pages and Controllers.
 
+```code
+Controllers.User.Createuser
+Controllers.User.DeleteUser	
+Controllers.User.GetUser
+Controllers.User.UpdateUser	
+Pages.Privacy
+```
+
 ```csharp
 
 [Authorize]
