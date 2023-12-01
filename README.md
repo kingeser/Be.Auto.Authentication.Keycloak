@@ -74,8 +74,35 @@ To use this integration, follow these steps:
 Once the integration is set up, you can use the `[Authorize]` attribute without specifying roles explicitly. The roles will be automatically mapped based on your Razor Pages and Controllers.
 
 ```csharp
+
 [Authorize]
-public class SecureController : Controller
+[Route("/user")]
+public class UserController : ControllerBase
 {
-    // Your secure actions here
+
+    [HttpGet("/get-user")]
+    public string GetUser()
+    {
+
+        return "Success";
+    }
+    [HttpGet("/create-user")]
+    public string Createuser()
+    {
+
+        return "Success";
+    }
+    [HttpGet("/update-user")]
+    public string UpdateUser()
+    {
+
+        return "Success";
+    }
+    [HttpGet("/delete-user")]
+    public string DeleteUser()
+    {
+
+        return "Success";
+    }
 }
+  ```
