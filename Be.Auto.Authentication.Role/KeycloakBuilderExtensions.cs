@@ -1,4 +1,6 @@
-﻿namespace Be.Auto.Authentication.Keycloak.Role;
+﻿using Microsoft.AspNetCore.Mvc.ApplicationParts;
+
+namespace Be.Auto.Authentication.Keycloak.Role;
 
 public static class KeycloakBuilderExtensions
 {
@@ -56,7 +58,7 @@ public static class KeycloakBuilderExtensions
             throw new ArgumentNullException(nameof(options.ClientRealm));
         }
 
-        var tool = new KeycloakApplicationRoleMigrationTool(options);
+        var tool = new KeycloakApplicationRoleMigrationTool(options,builder.ApplicationServices.GetRequiredService<ApplicationPartManager>());
 
         tool.Migrate();
 

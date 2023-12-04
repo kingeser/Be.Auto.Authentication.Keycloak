@@ -8,6 +8,7 @@ namespace Be.Auto.Authentication.Keycloak.Role;
 
 public class KeycloakAsyncAuthorizationFilter : IAsyncAuthorizationFilter
 {
+
     public Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         if (!context.ActionDescriptor.EndpointMetadata
@@ -21,7 +22,7 @@ public class KeycloakAsyncAuthorizationFilter : IAsyncAuthorizationFilter
         {
             case ControllerActionDescriptor controllerActionDescriptor:
                 {
-                    var controllerName = controllerActionDescriptor.ControllerTypeInfo.Name.Replace("Controller", string.Empty);
+                    var controllerName = RoleExtension.Normalize(controllerActionDescriptor.ControllerTypeInfo.Name);
                     var actionName = controllerActionDescriptor.ActionName;
                     var controllerRole = $"Controllers.{controllerName}.{actionName}";
 
@@ -34,7 +35,7 @@ public class KeycloakAsyncAuthorizationFilter : IAsyncAuthorizationFilter
                 }
             case CompiledPageActionDescriptor pageActionDescriptor:
                 {
-                    var pageRole = $"Pages.{pageActionDescriptor.ModelTypeInfo?.Name?.Replace("Model", string.Empty)}";
+                    var pageRole = $"Pages.{RoleExtension.Normalize(pageActionDescriptor.ModelTypeInfo?.Name ?? "")}";
 
                     if (!context.HttpContext.User.IsInRole(pageRole))
                     {

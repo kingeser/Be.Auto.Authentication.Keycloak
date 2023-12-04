@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Data;
+using System.Reflection;
 using System.Text;
 using FS.Keycloak.RestApiClient.Api;
 using FS.Keycloak.RestApiClient.Authentication.ClientFactory;
@@ -7,6 +8,9 @@ using FS.Keycloak.RestApiClient.ClientFactory;
 using FS.Keycloak.RestApiClient.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Be.Auto.Authentication.Keycloak.Role
@@ -14,56 +18,57 @@ namespace Be.Auto.Authentication.Keycloak.Role
     internal class KeycloakApplicationRoleMigrationTool
     {
         private readonly KeycloakOption _options;
+        private readonly ApplicationPartManager _applicationPartManager;
 
 
-        internal KeycloakApplicationRoleMigrationTool(KeycloakOption options)
+        internal KeycloakApplicationRoleMigrationTool(KeycloakOption options, ApplicationPartManager applicationPartManager)
         {
             _options = options;
+            _applicationPartManager = applicationPartManager;
         }
         internal void Migrate()
         {
-         
-            var types =
-                (from t in AppDomain.CurrentDomain.GetAssemblies().SelectMany(t => t.GetTypes())
-                 where t.GetCustomAttribute<AuthorizeAttribute>() != null
-                 let interfaces = t.GetInterfaces().Where(x => !$"{x.FullName}".StartsWith(AppDomain.CurrentDomain.FriendlyName))
-                 select t).ToList();
+            var controllerFeature = new ControllerFeature();
 
-            foreach (var type in types)
+            _applicationPartManager.PopulateFeature(controllerFeature);
+
+            var controllerTypes = controllerFeature.Controllers.Where(t => (t.GetCustomAttribute<AuthorizeAttribute>() != null || t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly).Any(m => m.GetCustomAttribute<AuthorizeAttribute>() != null)) && $"{t.FullName}".StartsWith(AppDomain.CurrentDomain.FriendlyName));
+
+            var pageTypes = (from t in AppDomain.CurrentDomain.GetAssemblies().SelectMany(t => t.GetTypes())
+                             where FindBaseType(t) == typeof(PageModel) && t.GetCustomAttribute<AuthorizeAttribute>() != null
+                                && $"{t.FullName}".StartsWith(AppDomain.CurrentDomain.FriendlyName)
+                             select t);
+
+            var roles = new List<Tuple<string?, string?>>();
+
+            foreach (var pageType in pageTypes)
             {
-                var roles = new List<Tuple<string?, string?>>();
-                var baseType = FindBaseType(type);
+                var typeName = AddSpaceBetweenCamelCase(pageType.Name);
+                var pageRole = $"Pages.{RoleExtension.Normalize(pageType.Name)}";
+                roles.Add(new Tuple<string?, string?>(pageRole, typeName));
+            }
+
+            foreach (var type in controllerTypes)
+            {
                 var typeName = AddSpaceBetweenCamelCase(type.Name);
-                if (baseType == typeof(PageModel))
-                {
-                    var pageRole = $"Pages.{type.Name?.Replace("Model", string.Empty)}";
+                var methods = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly).Where(t => (t.GetCustomAttribute<AuthorizeAttribute>() != null && type.GetCustomAttribute<AllowAnonymousAttribute>() == null) || (type.GetCustomAttribute<AuthorizeAttribute>() != null && t.GetCustomAttribute<AllowAnonymousAttribute>() == null));
+                roles.AddRange(from methodInfo in methods let name = RoleExtension.Normalize(type.Name) let method = methodInfo.Name select $"Controllers.{name}.{method}" into controllerRole select new Tuple<string?, string?>(controllerRole, typeName));
 
-                    roles.Add(new Tuple<string?, string?>(pageRole, typeName));
+            }
 
-                }
-                else if (baseType == typeof(ControllerBase))
-                {
-                    var methods = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+            roles = roles.Where(t => !string.IsNullOrEmpty(t.Item1)).ToList();
 
-                    roles.AddRange(from methodInfo in methods let name = type.Name.Replace("Controller", "") let method = methodInfo.Name select $"Controllers.{name}.{method}" into controllerRole select new Tuple<string?, string?>(controllerRole, typeName));
-                }
+            if (!roles.Any()) return;
 
-                roles = roles.Where(t => !string.IsNullOrEmpty(t.Item1)).ToList();
-
-                if (!roles.Any()) continue;
-
-                foreach (var role in roles)
-                {
-
-                    CreateRoleIfNotExistAsync(new RoleRepresentation(Guid.NewGuid().ToString(), role.Item1, role.Item2));
-
-                }
+            foreach (var role in roles)
+            {
+                CreateRoleIfNotExistAsync(new RoleRepresentation(Guid.NewGuid().ToString(), role.Item1, role.Item2));
 
             }
 
         }
 
-    
+
 
         private void CreateRoleIfNotExistAsync(RoleRepresentation role)
         {
@@ -99,6 +104,8 @@ namespace Be.Auto.Authentication.Keycloak.Role
             }
 
         }
+
+
         private RoleRepresentation? _TryFindRole(RoleRepresentation role, RoleContainerApi roleApi, ClientRepresentation client)
         {
             try
@@ -130,6 +137,9 @@ namespace Be.Auto.Authentication.Keycloak.Role
 
             return result.ToString();
         }
+
+
+
         private static Type FindBaseType(Type type)
         {
             var baseType = type.BaseType;
