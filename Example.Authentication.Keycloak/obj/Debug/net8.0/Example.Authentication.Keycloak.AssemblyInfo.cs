@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Example.Authentication.Keycloak")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6c5d09c650e38bf295db642a996288bf907b5211")]
 [assembly: System.Reflection.AssemblyProductAttribute("Example.Authentication.Keycloak")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Example.Authentication.Keycloak")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

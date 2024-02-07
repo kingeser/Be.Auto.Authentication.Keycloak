@@ -43,16 +43,18 @@ namespace Be.Auto.Authentication.Keycloak.Role
 
             foreach (var pageType in pageTypes)
             {
-                var typeName = AddSpaceBetweenCamelCase(pageType.Name);
-                var pageRole = $"Pages.{RoleExtension.Normalize(pageType.Name)}";
+                var pageRole = RoleExtension.Normalize($"{pageType.FullName}".Replace($"{AppDomain.CurrentDomain.FriendlyName}.", string.Empty));
+                var typeName = NormalizeName(pageRole);
                 roles.Add(new Tuple<string?, string?>(pageRole, typeName));
             }
 
             foreach (var type in controllerTypes)
             {
-                var typeName = AddSpaceBetweenCamelCase(type.Name);
+                var typeName =
+                    RoleExtension.Normalize($"{type.FullName}".Replace($"{AppDomain.CurrentDomain.FriendlyName}.", string.Empty));
+
                 var methods = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly).Where(t => (t.GetCustomAttribute<AuthorizeAttribute>() != null && type.GetCustomAttribute<AllowAnonymousAttribute>() == null) || (type.GetCustomAttribute<AuthorizeAttribute>() != null && t.GetCustomAttribute<AllowAnonymousAttribute>() == null));
-                roles.AddRange(from methodInfo in methods let name = RoleExtension.Normalize(type.Name) let method = methodInfo.Name select $"Controllers.{name}.{method}" into controllerRole select new Tuple<string?, string?>(controllerRole, typeName));
+                roles.AddRange(from methodInfo in methods  let method = methodInfo.Name select $"{typeName}.{method}" into controllerRole select new Tuple<string?, string?>(controllerRole, NormalizeName(typeName)));
 
             }
 
@@ -119,18 +121,34 @@ namespace Be.Auto.Authentication.Keycloak.Role
             }
         }
 
-        private static string AddSpaceBetweenCamelCase(string input)
+        private static string NormalizeName(string input)
         {
+
             if (string.IsNullOrEmpty(input))
                 return input;
 
+            input = input.TrimStart().TrimEnd().Trim();
+
+
+            input = input.Replace(".", "");
+
+            if (input.EndsWith("Index", StringComparison.OrdinalIgnoreCase))
+            {
+                input = input.Replace("Index", string.Empty);
+            }
+
             var result = new StringBuilder(input.Length * 2);
+
             result.Append(input[0]);
 
             for (var i = 1; i < input.Length; i++)
             {
                 if (char.IsUpper(input[i]) && !char.IsWhiteSpace(input[i - 1]))
+                {
                     result.Append(' ');
+                    result.Append('»');
+                    result.Append(' ');
+                }
 
                 result.Append(input[i]);
             }
